@@ -129,7 +129,7 @@ for day in os.listdir(phs_path):
     plt.grid()
     plt.show()
 
-    ## TODO: Add keys need to export here
+    ## TODO: What keys you want to export, add them here! 
     export_keys =  ['RRi', 'RRii', 'RRi_interp', 'RRii_interp', 'freqs', 'periodogram']
     for csv_file in os.listdir(filepath):
 
