@@ -80,14 +80,6 @@ for day in os.listdir(phs_path):
     data[day]['RRi'] = data[day]['hr'][:-1]
     data[day]['RRii'] = data[day]['hr'][1:]
 
-    ## Get the periodogram
-    ang_freqs = np.linspace(0.01,0.5*2*pi, 250)
-    freqs = ang_freqs / (2*pi)
-    hrs = np.array(data[day]['hr'],dtype = np.float64)
-    periodogram = lombscargle(np.array(data[day]['hr_time']), (hrs - np.mean(hrs)), ang_freqs)
-    data[day]['freqs'] = freqs
-    data[day]['periodogram'] = periodogram
-
     ## Interpolation -- append the times -> interpolate -> sort by time
     concat_time = np.append(data[day]['steps_daytime'],data[day]['hr_daytime'])
     concat_hr = np.interp(concat_time ,data[day]['hr_daytime'],data[day]['hr'])
@@ -112,6 +104,27 @@ for day in os.listdir(phs_path):
 
     data[day]['RRi_interp'] = data[day]['hr_interp'][:-1]
     data[day]['RRii_interp'] = data[day]['hr_interp'][1:]
+    
+    ## Get the periodogram
+    ang_freqs = np.linspace(0.01*2*pi,0.5*2*pi, 10000)
+    freqs = ang_freqs / (2*pi)
+    hrs = np.array(data[day]['hr_interp'],dtype = np.float64)
+    periodogram = lombscargle(np.array(data[day]['hr_time_interp']), (hrs - np.mean(hrs)), ang_freqs)
+    data[day]['freqs'] = freqs
+    data[day]['periodogram'] = periodogram
+    plt.figure()
+    plt.plot(data[day]['freqs'], data[day]['periodogram'],'.')
+    plt.title('periodogram')
+    plt.grid()
+    
+    # low frequency power = 0.04 - 0.15 Hz
+    # high frequency power = 0.15 - 0.4 Hz
+    spacing = data[day]['freqs'][1] - data[day]['freqs'][0]
+    low_freqs = [x for x,y in zip(data[day]['periodogram'],data[day]['freqs']) if y >= 0.04 and y <= 0.15]
+    high_freqs = [x for x,y in zip(data[day]['periodogram'],data[day]['freqs']) if y >= 0.15 and y <= 0.4]
+    data[day]['low_power'] = np.trapz(low_freqs, None, dx = spacing)
+    data[day]['high_power'] = np.trapz(high_freqs, None, dx = spacing)
+    plt.show()
 
     # HR
     plt.figure()
@@ -130,7 +143,7 @@ for day in os.listdir(phs_path):
     plt.show()
 
     ## TODO: What keys you want to export, add them here! 
-    export_keys =  ['RRi', 'RRii', 'RRi_interp', 'RRii_interp', 'freqs', 'periodogram']
+    export_keys =  ['RRi', 'RRii', 'RRi_interp', 'RRii_interp', 'freqs', 'periodogram', 'low_power', 'high_power']
     for csv_file in os.listdir(filepath):
 
         if csv_file == 'Data_ActivityRawType.csv':
@@ -147,7 +160,10 @@ for day in os.listdir(phs_path):
     with open(filepath + day + '.csv', 'w') as w:
         for key in export_keys:
             data_list = [key]
-            data_list.extend(list(map(str, data[day][key])))
+            if type(data[day][key]) == np.float64:
+                data_list.append(str(data[day][key]))
+            else:
+                data_list.extend(list(map(str, data[day][key])))
             w.write((','.join(data_list)) + '\n')
     print('done!')
 
