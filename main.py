@@ -6,13 +6,15 @@ import matplotlib.pyplot as plt
 from scipy.signal import lombscargle
 import numpy as np
 from math import pi
+import pandas as pd
 
 ## TODO: Calcluate the DFA
 ## TODO: (optional) Fit the data / moving average for visualizing
 ## TODO: Calculate the entropy?
 ## TODO: (optional) Fit ellipse? -- seems more work than its worth since we're doing static
 
-phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
+#phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
+phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
 data = collections.OrderedDict() # data is a dictionary of dictionaries
 data['day1'] = collections.OrderedDict()
 data['day2'] = collections.OrderedDict()
@@ -30,6 +32,55 @@ for day in os.listdir(phs_path):
             data_key = 'hr'
         else:
             continue
+
+        ### BEGUM ###
+        
+        if data_key == 'hr':              
+            # Read file to a data frame
+            hrFrame = pd.read_csv(filepath + csv_file)
+            hrFrame.columns = ['timestamp', 'heart']
+
+            # Convert timestamp to datetime
+            hrFrame['dt'] = pd.to_datetime(hrFrame['timestamp'], unit = 'ms')
+            hrFrame['hrOfDay'] = hrFrame['dt'].dt.hour
+            # Just reserve a column for the day portion. 8 does not mean anything
+            hrFrame['dayPortion'] = hrFrame['hrOfDay'] // 8
+            # Actually set the day portion column
+            hrFrame.loc[(hrFrame['hrOfDay'] >= 6) & (hrFrame['hrOfDay'] < 14), 'dayPortion'] = 0
+            hrFrame.loc[(hrFrame['hrOfDay'] >= 14) & (hrFrame['hrOfDay'] < 20), 'dayPortion'] = 1
+            hrFrame.loc[(hrFrame['hrOfDay'] >= 20) | (hrFrame['hrOfDay'] < 6), 'dayPortion'] = 2
+
+            # Calculate the time difference between adjacent measurements in ms
+            hrFrame['timestampDiff'] = hrFrame['timestamp'].shift(-1) -  hrFrame['timestamp']
+            # Calculate the square root of the difference
+            hrFrame['timestampDiffSquared'] = np.square(hrFrame['timestampDiff'])
+
+            # Calculcate RMSSD for each portion of the day.
+            morningRMSSD = np.sqrt(np.mean(hrFrame[(hrFrame['dayPortion'] == 0) & (hrFrame['timestampDiff'] < 1500)]['timestampDiffSquared']))
+            afternoonRMSSD = np.sqrt(np.mean(hrFrame[(hrFrame['dayPortion'] == 1) & (hrFrame['timestampDiff'] < 1500)]['timestampDiffSquared']))
+            nightRMSSD = np.sqrt(np.mean(hrFrame[(hrFrame['dayPortion'] == 2) & (hrFrame['timestampDiff'] < 1500)]['timestampDiffSquared']))
+
+            # Calculcate PNN50 for each portion of the day
+            morningPNN50 = float(len(hrFrame[(hrFrame['dayPortion'] == 0) & (hrFrame['timestampDiff'] < 1500)  
+                                     & (hrFrame['timestampDiff'] > 50)])) / (float(len(hrFrame[(hrFrame['dayPortion'] == 0)  
+                                                                                              & (hrFrame['timestampDiff'] < 1500)]))+1) #smoothing
+            afternoonPNN50 = float(len(hrFrame[(hrFrame['dayPortion'] == 1) & (hrFrame['timestampDiff'] < 1500)  
+                                     & (hrFrame['timestampDiff'] > 50)])) / (float(len(hrFrame[(hrFrame['dayPortion'] == 1)  
+                                                                                              & (hrFrame['timestampDiff'] < 1500)]))+1)
+            nightPNN50 = float(len(hrFrame[(hrFrame['dayPortion'] == 2) & (hrFrame['timestampDiff'] < 1500)  
+                                     & (hrFrame['timestampDiff'] > 50)])) / (float(len(hrFrame[(hrFrame['dayPortion'] == 2)  
+                                                                                              & (hrFrame['timestampDiff'] < 1500)]))+1)
+            # Calculate the median heart rate for each portion of the day
+            medianHr = hrFrame.groupby(by = ['dayPortion']).agg({'heart' : np.median})
+
+            # Calculate the number of measurements where patient had > 180 heart rate for each day portion.
+            greaterThan180 = hrFrame.groupby(by = ['dayPortion']).agg({'heart':lambda x: (x > 180).sum()})
+
+
+        ### BEGUM ###
+
+
+        ### read ###
 
         data[day][data_key + '_raw'] = np.empty([0,0], dtype = np.float64)
         data[day][data_key + '_time'] = np.empty([0,0])
@@ -165,6 +216,20 @@ for day in os.listdir(phs_path):
             else:
                 data_list.extend(list(map(str, data[day][key])))
             w.write((','.join(data_list)) + '\n')
+
+    ### BEGUM ###
+    with open(filepath + day + '.csv', 'a') as w:
+        w.write('rMSSD,' + morningRMSSD.astype(str) + ',' + afternoonRMSSD.astype(str) + ','+ nightRMSSD.astype(str) + '\n')
+        w.write('pNN50,' + str(morningPNN50) + ',' + str(afternoonPNN50) + ','+ str(nightPNN50) + '\n')
+        w.write('Median')
+        for heartRate in medianHr['heart'].tolist():
+            w.write(','+ str(heartRate))
+        w.write('\n')
+        w.write('gt180')
+        for heartRate in greaterThan180['heart'].tolist():
+            w.write(','+ str(heartRate))
+        w.write('\n')
+    ### BEGUM ###
     print('done!')
 
 ## HR
