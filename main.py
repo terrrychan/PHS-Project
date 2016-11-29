@@ -13,8 +13,8 @@ import pandas as pd
 ## TODO: Calculate the entropy?
 ## TODO: (optional) Fit ellipse? -- seems more work than its worth since we're doing static
 
-#phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
-phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
+phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
+#phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
 data = collections.OrderedDict() # data is a dictionary of dictionaries
 data['day1'] = collections.OrderedDict()
 data['day2'] = collections.OrderedDict()
@@ -25,7 +25,7 @@ for day in os.listdir(phs_path):
     for csv_file in os.listdir(filepath):
 
         if csv_file == 'Data_ActivityRawType.csv':
-            data_key = 'type'
+            data_key = 'activitytype'
         elif csv_file == 'Data_ActivityStepsPerMinute.csv':
             data_key = 'steps'
         elif csv_file == 'Data_HeartRate.csv':
@@ -111,7 +111,7 @@ for day in os.listdir(phs_path):
     for csv_file in os.listdir(filepath):
 
         if csv_file == 'Data_ActivityRawType.csv':
-            data_key = 'type'
+            data_key = 'activitytype'
         elif csv_file == 'Data_ActivityStepsPerMinute.csv':
             data_key = 'steps'
         elif csv_file == 'Data_HeartRate.csv':
@@ -121,7 +121,7 @@ for day in os.listdir(phs_path):
         
         data[day][data_key + '_finaltime'] = data[day][data_key + '_time'] - daytime_orig
         data[day][data_key + '_daytime'] = data[day][data_key + '_finaltime'] + time_of_day # time of day in 24 hr format
-        if data_key == 'type':
+        if data_key == 'activitytype':
             data_counter = 0
             for i in range(1, len(data[day][data_key])):
                 if data[day][data_key][i] > 6: 
@@ -137,21 +137,21 @@ for day in os.listdir(phs_path):
     full_array = np.column_stack([concat_time, concat_hr])
     full_array = full_array[np.argsort(full_array[:,0])]
     data[day]['hr_interp'] = full_array[:,1]
-    data[day]['hr_time_interp'] = full_array[:,0]
+    data[day]['hr_daytime_interp'] = full_array[:,0]
 
     concat_time = np.append(data[day]['hr_daytime'],data[day]['steps_daytime'])
     concat_steps = np.interp(concat_time ,data[day]['steps_daytime'],data[day]['steps'])
     full_array = np.column_stack([concat_time, concat_steps])
     full_array = full_array[np.argsort(full_array[:,0])]
     data[day]['steps_interp'] = full_array[:,1]
-    data[day]['steps_time_interp'] = full_array[:,0]
+    data[day]['steps_daytime_interp'] = full_array[:,0]
 
-    concat_time = np.append(data[day]['hr_daytime'],data[day]['type_daytime'])
-    concat_type = np.interp(concat_time ,data[day]['type_daytime'],data[day]['type'])
+    concat_time = np.append(data[day]['hr_daytime'],data[day]['activitytype_daytime'])
+    concat_type = np.interp(concat_time ,data[day]['activitytype_daytime'],data[day]['activitytype'])
     full_array = np.column_stack([concat_time, concat_type])
     full_array = full_array[np.argsort(full_array[:,0])]
-    data[day]['type_interp'] = full_array[:,1]
-    data[day]['type_time_interp'] = full_array[:,0]
+    data[day]['activitytype_interp'] = full_array[:,1]
+    data[day]['activitytype_daytime_interp'] = full_array[:,0]
 
     data[day]['RRi_interp'] = data[day]['hr_interp'][:-1]
     data[day]['RRii_interp'] = data[day]['hr_interp'][1:]
@@ -160,7 +160,7 @@ for day in os.listdir(phs_path):
     ang_freqs = np.linspace(0.01*2*pi,0.5*2*pi, 10000)
     freqs = ang_freqs / (2*pi)
     hrs = np.array(data[day]['hr_interp'],dtype = np.float64)
-    periodogram = lombscargle(np.array(data[day]['hr_time_interp']), (hrs - np.mean(hrs)), ang_freqs)
+    periodogram = lombscargle(np.array(data[day]['hr_daytime_interp']), (hrs - np.mean(hrs)), ang_freqs)
     data[day]['freqs'] = freqs
     data[day]['periodogram'] = periodogram
     plt.figure()
@@ -179,7 +179,7 @@ for day in os.listdir(phs_path):
 
     # HR
     plt.figure()
-    plt.plot(data[day]['hr_time_interp'], data[day]['hr_interp'])
+    plt.plot(data[day]['hr_daytime_interp'], data[day]['hr_interp'])
     plt.title('HR')
     plt.grid()
     plt.show()
@@ -198,7 +198,7 @@ for day in os.listdir(phs_path):
     for csv_file in os.listdir(filepath):
 
         if csv_file == 'Data_ActivityRawType.csv':
-            data_key = 'type'
+            data_key = 'activitytype'
         elif csv_file == 'Data_ActivityStepsPerMinute.csv':
             data_key = 'steps'
         elif csv_file == 'Data_HeartRate.csv':
@@ -206,8 +206,11 @@ for day in os.listdir(phs_path):
         else:
             continue
         
-        export_keys.extend([(data_key + '_daytime'), data_key, (data_key + '_interp'),  (data_key + '_time_interp')])
+        export_keys.extend([(data_key + '_daytime'), data_key, (data_key + '_interp'),  (data_key + '_daytime_interp')])
         
+    plt.figure()
+    plt.plot(data[day]['activitytype_daytime'], data[day]['activitytype'],'b') #,data[day]['activitytype_interp'],'r')
+    plt.show()
     with open(filepath + day + '.csv', 'w') as w:
         for key in export_keys:
             data_list = [key]
