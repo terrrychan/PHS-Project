@@ -13,8 +13,8 @@ import pandas as pd
 ## TODO: Calculate the entropy?
 ## TODO: (optional) Fit ellipse? -- seems more work than its worth since we're doing static
 
-phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
-#phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
+#phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
+phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
 data = collections.OrderedDict() # data is a dictionary of dictionaries
 data['day1'] = collections.OrderedDict()
 data['day2'] = collections.OrderedDict()
@@ -76,7 +76,85 @@ for day in os.listdir(phs_path):
             # Calculate the number of measurements where patient had > 180 heart rate for each day portion.
             greaterThan180 = hrFrame.groupby(by = ['dayPortion']).agg({'heart':lambda x: (x > 180).sum()})
 
+        elif data_key == 'activitytype':
+            # Read file to a data frame
+            activityFrame = pd.read_csv(filepath + csv_file)
+            activityFrame.columns = ['timestamp', 'activity']
 
+            # Convert timestamp to datetime
+            activityFrame['dt'] = pd.to_datetime(activityFrame['timestamp'], unit = 'ms')
+            activityFrame['hrOfDay'] = activityFrame['dt'].dt.hour
+            # Just reserve a column for the day portion. 8 does not mean anything
+            activityFrame['dayPortion'] = activityFrame['hrOfDay'] // 8
+            # Actually set the day portion column
+            activityFrame.loc[(activityFrame['hrOfDay'] >= 6) & (activityFrame['hrOfDay'] < 14), 'dayPortion'] = 0
+            activityFrame.loc[(activityFrame['hrOfDay'] >= 14) & (activityFrame['hrOfDay'] < 20), 'dayPortion'] = 1
+            activityFrame.loc[(activityFrame['hrOfDay'] >= 20) | (activityFrame['hrOfDay'] < 6), 'dayPortion'] = 2
+
+            silent = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==0).sum()})
+            walking = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==1).sum()})
+            running = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==2).sum()})
+            non_wear = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==3).sum()})
+            REM = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==4).sum()})
+            NREM = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==5).sum()})
+            charging = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x==6).sum()})
+            undefined = activityFrame.groupby(by = ['dayPortion']).agg({'activity':lambda x:(x>6).sum()})
+
+            lSilent = silent['activity'].tolist()
+            lWalking = walking['activity'].tolist()
+            lRunning = running['activity'].tolist()
+            lNonWear = non_wear['activity'].tolist()
+            lREM = REM['activity'].tolist()
+            lNREM = NREM['activity'].tolist()
+            lCharging = charging['activity'].tolist()
+            lUndefined = undefined['activity'].tolist()
+
+            total_morning = lSilent[0] + lWalking[0] + lRunning[0] + lNonWear[0] + lREM[0] + lNREM[0] + lCharging[0] + lUndefined[0]
+            total_afternoon = lSilent[1] + lWalking[1] + lRunning[1] + lNonWear[1] + lREM[1] + lNREM[1] + lCharging[1] + lUndefined[1]
+            total_night = lSilent[2] + lWalking[2] + lRunning[2] + lNonWear[2] + lREM[2] + lNREM[2] + lCharging[2] + lUndefined[2]
+
+            pSilent_m = (lSilent[0]/total_morning)*100
+            pSilent_a = (lSilent[1]/total_afternoon)*100
+            pSilent_n = (lSilent[2]/total_night)*100
+            
+            pWalking_m = (lWalking[0]/total_morning)*100
+            pWalking_a = (lWalking[1]/total_afternoon)*100
+            pWalking_n = (lWalking[2]/total_night)*100
+            
+            pRunning_m = (lRunning[0]/total_morning)*100
+            pRunning_a = (lRunning[1]/total_afternoon)*100
+            pRunning_n = (lRunning[2]/total_night)*100
+            
+            pNonWear_m = (lNonWear[0]/total_morning)*100
+            pNonWear_a = (lNonWear[1]/total_afternoon)*100
+            pNonWear_n = (lNonWear[2]/total_night)*100
+            
+            pREM_m = (lREM[0]/total_morning)*100
+            pREM_a = (lREM[1]/total_afternoon)*100
+            pREM_n = (lREM[2]/total_night)*100
+            
+            pNREM_m = (lNREM[0]/total_morning)*100
+            pNREM_a = (lNREM[1]/total_afternoon)*100
+            pNREM_n = (lNREM[2]/total_night)*100
+            
+            pCharging_m = (lCharging[0]/total_morning)*100
+            pCharging_a = (lCharging[1]/total_afternoon)*100
+            pCharging_n = (lCharging[2]/total_night)*100
+            
+            pUndefined_m = (lUndefined[0]/total_morning)*100
+            pUndefined_a = (lUndefined[1]/total_afternoon)*100
+            pUndefined_n = (lUndefined[2]/total_night)*100
+
+            silent_allday = lSilent[0]+lSilent[1]+lSilent[2]
+            walking_allday = lWalking[0]+lWalking[1]+lWalking[2]
+            running_allday = lRunning[0]+ lRunning[1]+lRunning[2]
+            nonwear_allday = lNonWear[0]+lNonWear[1]+lNonWear[2]
+            REM_allday = lREM[0]+lREM[1]+lREM[2]
+            NREM_allday = lNREM[0]+lNREM[1]+lNREM[2]
+            charging_allday = lCharging[0]+lCharging[1]+lCharging[2]
+            undefined_allday = lUndefined[0]+lUndefined[1]+lUndefined[2]
+
+            total_allday = total_morning + total_night + total_afternoon
         ### BEGUM ###
 
 
@@ -232,6 +310,22 @@ for day in os.listdir(phs_path):
         for heartRate in greaterThan180['heart'].tolist():
             w.write(','+ str(heartRate))
         w.write('\n')
+        w.write('act_silent_percentage,' + str(pSilent_m) + ',' + str(pSilent_a) + ','+ str(pSilent_n) + '\n')
+        w.write('act_walking_percentage,' + str(pWalking_m) + ',' + str(pWalking_a) + ','+ str(pWalking_n) + '\n')
+        w.write('act_running_percentage,' + str(pRunning_m) + ',' + str(pRunning_a) + ','+ str(pRunning_n) + '\n')
+        w.write('act_nonWear_percentage,' + str(pNonWear_m) + ',' + str(pNonWear_a) + ','+ str(pNonWear_n) + '\n')
+        w.write('act_REM_percentage,' + str(pREM_m) + ',' + str(pREM_a) + ','+ str(pREM_n) + '\n')
+        w.write('act_NREM_percentage,' + str(pNREM_m) + ',' + str(pNREM_a) + ','+ str(pNREM_n) + '\n')
+        w.write('act_charging_percentage,' + str(pCharging_m) + ',' + str(pCharging_a) + ','+ str(pCharging_n) + '\n')
+        w.write('act_undefined_percentage,' + str(pUndefined_m) + ',' + str(pUndefined_a) + ','+ str(pUndefined_n) + '\n')
+        w.write('act_silent_percentage_allday,' + str((silent_allday/total_allday)*100) + '\n')
+        w.write('act_walking_percentage_allday,' + str((walking_allday/total_allday)*100) + '\n')
+        w.write('act_running_percentage_allday,' + str((running_allday/total_allday)*100) + '\n')
+        w.write('act_nonWear_percentage_allday,' + str((nonwear_allday/total_allday)*100) + '\n')
+        w.write('act_REM_percentage_allday,' + str((REM_allday/total_allday)*100) + '\n')
+        w.write('act_NREM_percentage_allday,' + str((NREM_allday/total_allday)*100) + '\n')
+        w.write('act_charging_percentage_allday,' + str((charging_allday/total_allday)*100) + '\n')
+        w.write('act_undefined_percentage_allday,' + str((undefined_allday/total_allday)*100) + '\n')
     ### BEGUM ###
     print('done!')
 
