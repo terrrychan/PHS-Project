@@ -1,3 +1,9 @@
+##
+## CardioCare 
+## Authors: Terence Chan, Begum Egilmez
+##
+## Last Modified: 12/06/16
+##
 import os 
 import collections
 import time
@@ -8,13 +14,11 @@ import numpy as np
 from math import pi
 import pandas as pd
 
-## TODO: Calcluate the DFA
-## TODO: (optional) Fit the data / moving average for visualizing
-## TODO: Calculate the entropy?
-## TODO: (optional) Fit ellipse? -- seems more work than its worth since we're doing static
+#IMPORTANT! Before using this code please modify phs_path variable to show the directory 
+#where patient information is stored in your local.
 
 #phs_path = r'C:\Users\Terence\Dropbox\Fall 2016\EECS 495 Personal Health Systems\Final Project\patient3\\'
-phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient3\\'
+phs_path = r'c:\Users\B\Dropbox\EECS495-PersonalHealth\project\INLIFErecordings\patient5\\'
 data = collections.OrderedDict() # data is a dictionary of dictionaries
 data['day1'] = collections.OrderedDict()
 data['day2'] = collections.OrderedDict()
@@ -33,8 +37,6 @@ for day in os.listdir(phs_path):
         else:
             continue
 
-        ### BEGUM ###
-        
         if data_key == 'hr':              
             # Read file to a data frame
             hrFrame = pd.read_csv(filepath + csv_file)
@@ -155,9 +157,7 @@ for day in os.listdir(phs_path):
             undefined_allday = lUndefined[0]+lUndefined[1]+lUndefined[2]
 
             total_allday = total_morning + total_night + total_afternoon
-        ### BEGUM ###
-
-
+        
         ### read ###
 
         data[day][data_key + '_raw'] = np.empty([0,0], dtype = np.float64)
@@ -298,7 +298,7 @@ for day in os.listdir(phs_path):
                 data_list.extend(list(map(str, data[day][key])))
             w.write((','.join(data_list)) + '\n')
 
-    ### BEGUM ###
+    
     with open(filepath + day + '.csv', 'a') as w:
         w.write('rMSSD,' + morningRMSSD.astype(str) + ',' + afternoonRMSSD.astype(str) + ','+ nightRMSSD.astype(str) + '\n')
         w.write('pNN50,' + str(morningPNN50) + ',' + str(afternoonPNN50) + ','+ str(nightPNN50) + '\n')
@@ -326,95 +326,5 @@ for day in os.listdir(phs_path):
         w.write('act_NREM_percentage_allday,' + str((NREM_allday/total_allday)*100) + '\n')
         w.write('act_charging_percentage_allday,' + str((charging_allday/total_allday)*100) + '\n')
         w.write('act_undefined_percentage_allday,' + str((undefined_allday/total_allday)*100) + '\n')
-    ### BEGUM ###
+    
     print('done!')
-
-## HR
-#plt.figure()
-#plt.plot(data['hr_time'],data['hr'],'--*')
-#plt.xlabel('Time (seconds')
-#plt.ylabel('Heart Rate [bpm]')
-#plt.title('HR vs time')
-#plt.grid()
-
-## Activity type
-#plt.figure()
-#plt.plot(data['type_time'],data['type'],'*')
-#plt.xlabel('Time (seconds)')
-#plt.ylabel('Type')
-#plt.title('Type vs time')
-#plt.grid()
-
-## Steps per minute
-#plt.figure()
-#plt.plot(data['steps_time'],data['steps'],'*')
-#plt.xlabel('Time (seconds')
-#plt.ylabel('Steps Per Minute')
-#plt.title('Steps per minute vs Time')
-#plt.grid()
-
-#plt.show()
-
-## Shared axes of activity type and steps
-#f, (ax1, ax2, ax3) = plt.subplots(3, sharex = True, sharey = False)
-#ax1.plot(data['type_time'],data['type'],'--*')
-#ax1.set_title('Activity and Steps')
-#ax1.set_ylabel('Activity Type')
-#ax1.grid()
-#ax2.plot(data['steps_time'],data['steps'],'--*')
-#ax2.set_ylabel('Steps per minute')
-#ax2.grid()
-#ax3.plot(data['hr_time'],data['hr'],'--*')
-#ax3.set_ylabel('HR [bpm]')
-#ax3.grid()
-#f.subplots_adjust(hspace = 0.05)
-#plt.setp([a.get_xticklabels() for a in f.axes[:-1]], visible = False)
-
-## Poincare plot 
-#plt.figure()
-#plt.plot(RRi, RRii, '.')
-#plt.xlabel('RR(i)')
-#plt.ylabel('RR(i+1)')
-#plt.title('Poincare Plot')
-#plt.grid()
-
-## Lomb periodogram
-#plt.figure()
-#plt.plot(data['freqs'], data['periodogram'])
-#plt.xlabel('Frequency [Hz]')
-#plt.ylabel('Power')
-#plt.grid()
-  
-## Get the run and walking ones
-#run_steps = [int(x) for x, y in zip(data['steps'], data['type']) if y == '2']
-#run_times = [int(x) for x, y in zip(data['steps_time'], data['type']) if y == '2']
-#walk_steps = [int(x) for x, y in zip(data['steps'], data['type']) if y == '1']
-#walk_times = [int(x) for x, y in zip(data['steps_time'], data['type']) if y == '1']
-#plt.figure()
-#ax = plt.plot(run_times, run_steps,'--b*', walk_times, walk_steps, '--r*')
-#plt.legend(ax, ['Run', 'Walk'])
-
-
-## Shared axes of activity type and steps
-#f, (ax1, ax2) = plt.subplots(2, sharex = True, sharey = False)
-#min_time = min([float(x) for x, y in zip(data['steps_time'], data['type']) if y == '2' or y == '1'])
-#min_time = max([float(x) for x, y in zip(data['steps_time'], data['type']) if y == '2' or y == '1'])
-#active_steps = [int(x) for x, y in zip(data['hr'], data['hr_time']) if y >= min_time and y <= max_time]
-#active_times = [float(x) for x, y in zip(data['hr_time'], data['hr_time']) if y >= min_time and y <= max_time]
-
-#ax1.plot(active_times, active_steps, '--*')
-#ax1.set_title('HR during active session')
-#ax1.set_ylabel('HR [bpm]')
-#ax1.grid()
-#ax2.plot(data['steps_time'],data['steps'],'--*')
-#ax2.set_ylabel('Steps per minute')
-#ax2.grid()
-#f.subplots_adjust(hspace = 0.05)
-#plt.setp([a.get_xticklabels() for a in f.axes[:-1]], visible = False)
-
-#unique_types = list(set(data['type']))
-#for i in unique_types:
-#    temp_time = [float(x) for x, y in zip(data['type_time'], data['type']) if y == str(i)]
-#    temp_steps = [float(x) for x, y in zip(data['steps'], data['type']) if y == str(i)]
-#    print('Mean steps for ' + str(i) + ' is ' + str(np.mean(np.asarray(temp_steps))))
-#plt.show()
